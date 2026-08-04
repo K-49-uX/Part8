@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { gql } from '@apollo/client'
 import { useQuery, useMutation } from '@apollo/client/react'
 
@@ -31,6 +31,13 @@ const Authors = (props) => {
     refetchQueries: [{ query: ALL_AUTHORS }],
   })
 
+  const authors = result.data ? result.data.allAuthors : []
+  useEffect(() => {
+    if (authors.length > 0 && !name) {
+      setName(authors[0].name)
+    }
+  }, [authors, name])
+
   if (!props.show) {
     return null
   }
@@ -38,8 +45,6 @@ const Authors = (props) => {
   if (result.loading) {
     return <div>loading...</div>
   }
-
-  const authors = result.data ? result.data.allAuthors : []
 
   const submit = async (event) => {
     event.preventDefault()
@@ -51,7 +56,6 @@ const Authors = (props) => {
       },
     })
 
-    setName('')
     setBorn('')
   }
 
@@ -79,10 +83,13 @@ const Authors = (props) => {
       <form onSubmit={submit}>
         <div>
           name
-          <input
-            value={name}
-            onChange={({ target }) => setName(target.value)}
-          />
+          <select value={name} onChange={({ target }) => setName(target.value)}>
+            {authors.map((a) => (
+              <option key={a.name} value={a.name}>
+                {a.name}
+              </option>
+            ))}
+          </select>
         </div>
         <div>
           born
