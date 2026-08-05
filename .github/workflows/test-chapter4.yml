@@ -14,14 +14,11 @@ jobs:
         with:
           node-version: "20"
       - name: Install dependencies
-        run: |
-          npm install
-          cd tests-chapter4
-          npm install
+        working-directory: tests-chapter4
+        run: npm ci
       - name: Run tests
+        working-directory: tests-chapter4
         env:
           NODE_ENV: test
           JWT_SECRET: test_secret_key_12345
-        run: |
-          cd tests-chapter4
-          npm test
+        run: npm test
