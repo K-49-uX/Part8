@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { useApolloClient, useQuery } from '@apollo/client/react'
-import Books from './components/Books'
 import Authors from './components/Authors'
+import Books from './components/Books'
+import NewBook from './components/NewBook'
+import LoginForm from './components/LoginForm'
 import { ALL_BOOKS } from './queries'
 
 const App = () => {
@@ -14,6 +16,7 @@ const App = () => {
     setToken(null)
     localStorage.removeItem('library-user-token')
     client.resetStore()
+    setPage('authors')
   }
 
   if (result.loading) {
@@ -26,14 +29,23 @@ const App = () => {
         <button onClick={() => setPage('authors')}>authors</button>
         <button onClick={() => setPage('books')}>books</button>
         {token ? (
-          <button onClick={logout}>logout</button>
+          <>
+            <button onClick={() => setPage('add')}>add book</button>
+            <button onClick={logout}>logout</button>
+          </>
         ) : (
           <button onClick={() => setPage('login')}>login</button>
         )}
       </div>
 
-      <Authors show={page === 'authors'} />
+      <Authors show={page === 'authors'} token={token} />
       <Books show={page === 'books'} books={result.data ? result.data.allBooks : []} />
+      <NewBook show={page === 'add'} setPage={setPage} />
+      <LoginForm
+        show={page === 'login'}
+        setToken={setToken}
+        setPage={setPage}
+      />
     </div>
   )
 }
