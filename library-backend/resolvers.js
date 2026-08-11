@@ -1,13 +1,16 @@
 const { GraphQLError } = require('graphql')
 const jwt = require('jsonwebtoken')
+const { PubSub } = require('graphql-subscriptions')
+const pubsub = new PubSub()
+
 const Author = require('./models/author')
 const Book = require('./models/book')
 const User = require('./models/user')
 
 const resolvers = {
   Query: {
-    authorCount: async () => Author.collection.countDocuments(),
     bookCount: async () => Book.collection.countDocuments(),
+    authorCount: async () => Author.collection.countDocuments(),
     allBooks: async (root, args) => {
       const filter = {}
 
@@ -46,7 +49,7 @@ const resolvers = {
       if (!currentUser) {
         throw new GraphQLError('not authenticated', {
           extensions: {
-            code: 'BAD_USER_INPUT',
+            code: 'UNAUTHENTICATED',
           },
         })
       }
@@ -68,7 +71,12 @@ const resolvers = {
         }
       }
 
-      const book = new Book({ ...args, author: author._id })
+      const book = new Book({
+        title: args.title,
+        published: args.published,
+        genres: args.genres,
+        author: author._id,
+      })
 
       try {
         await book.save()
@@ -82,7 +90,11 @@ const resolvers = {
         })
       }
 
-      return book.populate('author')
+      const populatedBook = await book.populate('author')
+
+      pubsub.publish('BOOK_ADDED', { bookAdded: populatedBook })
+
+      return populatedBook
     },
 
     editAuthor: async (root, args, context) => {
@@ -91,7 +103,7 @@ const resolvers = {
       if (!currentUser) {
         throw new GraphQLError('not authenticated', {
           extensions: {
-            code: 'BAD_USER_INPUT',
+            code: 'UNAUTHENTICATED',
           },
         })
       }
@@ -110,7 +122,7 @@ const resolvers = {
         throw new GraphQLError(`Updating author failed: ${error.message}`, {
           extensions: {
             code: 'BAD_USER_INPUT',
-            invalidArgs: args.setBornTo,
+            invalidArgs: args.name,
             error,
           },
         })
@@ -126,7 +138,7 @@ const resolvers = {
       })
 
       try {
-        return await user.save()
+        await user.save()
       } catch (error) {
         throw new GraphQLError(`Creating user failed: ${error.message}`, {
           extensions: {
@@ -136,6 +148,8 @@ const resolvers = {
           },
         })
       }
+
+      return user
     },
 
     login: async (root, args) => {
@@ -154,17 +168,15 @@ const resolvers = {
         id: user._id,
       }
 
-      return { value: jwt.sign(userForToken, process.env.JWT_SECRET) }
-    },
-
-    _resetDatabase: async () => {
-      if (process.env.NODE_ENV !== 'test') {
-        throw new GraphQLError('_resetDatabase is only available in test mode')
+      return {
+        value: jwt.sign(userForToken, process.env.JWT_SECRET),
       }
-      await Author.deleteMany({})
-      await Book.deleteMany({})
-      await User.deleteMany({})
-      return true
+    },
+  },
+
+  Subscription: {
+    bookAdded: {
+      subscribe: () => pubsub.asyncIterableIterator('BOOK_ADDED'),
     },
   },
 }
