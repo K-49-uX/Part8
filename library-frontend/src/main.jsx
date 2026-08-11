@@ -7,13 +7,12 @@ import {
   InMemoryCache,
   createHttpLink,
   split,
+  ApolloLink,
 } from '@apollo/client'
 import { setContext } from '@apollo/client/link/context'
 import { getMainDefinition } from '@apollo/client/utilities'
 import { GraphQLWsLink } from '@apollo/client/link/subscriptions'
 import { createClient } from 'graphql-ws'
-
-// Import ApolloProvider from @apollo/client/react
 import { ApolloProvider } from '@apollo/client/react'
 
 const authLink = setContext((_, { headers }) => {
