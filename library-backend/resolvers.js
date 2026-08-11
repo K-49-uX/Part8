@@ -11,6 +11,7 @@ const resolvers = {
   Query: {
     bookCount: async () => Book.collection.countDocuments(),
     authorCount: async () => Author.collection.countDocuments(),
+    
     allBooks: async (root, args) => {
       const filter = {}
 
@@ -28,9 +29,26 @@ const resolvers = {
 
       return Book.find(filter).populate('author')
     },
+
     allAuthors: async () => {
-      return Author.find({})
+      return Author.aggregate([
+        {
+          $lookup: {
+            from: 'books',
+            localField: '_id',
+            foreignField: 'author',
+            as: 'books',
+          },
+        },
+        {
+          $addFields: {
+            bookCount: { $size: '$books' },
+            id: '$_id',
+          },
+        },
+      ])
     },
+
     me: (root, args, context) => {
       return context.currentUser
     },
@@ -38,6 +56,9 @@ const resolvers = {
 
   Author: {
     bookCount: async (root) => {
+      if (root.bookCount !== undefined) {
+        return root.bookCount
+      }
       return Book.countDocuments({ author: root._id })
     },
   },
