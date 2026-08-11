@@ -1,55 +1,47 @@
 import { useState } from 'react'
-import { gql } from '@apollo/client'
 import { useMutation } from '@apollo/client/react'
+import { CREATE_BOOK, ALL_BOOKS, ALL_AUTHORS } from '../queries'
 
-const ALL_AUTHORS = gql`
-  query {
-    allAuthors {
-      name
-      born
-      bookCount
-    }
-  }
-`
-
-const ALL_BOOKS = gql`
-  query {
-    allBooks {
-      title
-      author
-      published
-    }
-  }
-`
-
-const ADD_BOOK = gql`
-  mutation createBook($title: String!, $author: String!, $published: Int!, $genres: [String!]!) {
-    addBook(
-      title: $title,
-      author: $author,
-      published: $published,
-      genres: $genres
-    ) {
-      title
-      author
-      published
-      genres
-    }
-  }
-`
-
-const NewBook = (props) => {
+const NewBook = ({ show, setPage }) => {
   const [title, setTitle] = useState('')
   const [author, setAuthor] = useState('')
   const [published, setPublished] = useState('')
   const [genre, setGenre] = useState('')
   const [genres, setGenres] = useState([])
 
-  const [createBook] = useMutation(ADD_BOOK, {
-    refetchQueries: [{ query: ALL_BOOKS }, { query: ALL_AUTHORS }],
+  const [createBook] = useMutation(CREATE_BOOK, {
+    refetchQueries: [{ query: ALL_AUTHORS }],
+    update: (cache, response) => {
+      const addedBook = response.data.addBook
+
+      // Helper function to update the cache for specific query variables
+      const updateBookCache = (variables) => {
+        cache.updateQuery({ query: ALL_BOOKS, variables }, (data) => {
+          if (!data) return null
+          // Avoid duplicate entries
+          const isDuplicate = data.allBooks.some((b) => b.id === addedBook.id)
+          if (isDuplicate) return data
+          return {
+            allBooks: data.allBooks.concat(addedBook),
+          }
+        })
+      }
+
+      // Update the unfiltered books query cache
+      updateBookCache()
+      updateBookCache({ genre: null })
+
+      // Update cache for each genre the new book belongs to
+      addedBook.genres.forEach((g) => {
+        updateBookCache({ genre: g })
+      })
+    },
+    onError: (error) => {
+      console.error(error.message)
+    },
   })
 
-  if (!props.show) {
+  if (!show) {
     return null
   }
 
@@ -60,7 +52,7 @@ const NewBook = (props) => {
       variables: {
         title,
         author,
-        published: parseInt(published, 10),
+        published: parseInt(published),
         genres,
       },
     })
@@ -70,11 +62,14 @@ const NewBook = (props) => {
     setAuthor('')
     setGenres([])
     setGenre('')
+    setPage('books')
   }
 
   const addGenre = () => {
-    setGenres(genres.concat(genre))
-    setGenre('')
+    if (genre.trim()) {
+      setGenres(genres.concat(genre.trim()))
+      setGenre('')
+    }
   }
 
   return (
