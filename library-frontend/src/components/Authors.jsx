@@ -1,34 +1,48 @@
-import { useState } from 'react'
-import { useQuery, useMutation } from '@apollo/client/react'
-import { ALL_AUTHORS, EDIT_BIRTHYEAR } from '../queries'
+import { useState } from "react";
+import { useQuery, useMutation } from "@apollo/client/react";
+import { ALL_AUTHORS, EDIT_AUTHOR } from "../queries";
 
-const Authors = ({ show, token }) => {
-  const [name, setName] = useState('')
-  const [born, setBorn] = useState('')
+const Authors = ({ show, token, setError }) => {
+  const [name, setName] = useState("");
+  const [born, setBorn] = useState("");
 
-  const result = useQuery(ALL_AUTHORS)
-  const [changeBorn] = useMutation(EDIT_BIRTHYEAR, {
+  const result = useQuery(ALL_AUTHORS);
+
+  const [changeBorn] = useMutation(EDIT_AUTHOR, {
     refetchQueries: [{ query: ALL_AUTHORS }],
-  })
+    onError: (error) => {
+      if (setError) {
+        setError(
+          error.graphQLErrors?.[0]?.message || "Failed to update author",
+        );
+      }
+    },
+  });
 
   if (!show) {
-    return null
+    return null;
   }
 
   if (result.loading) {
-    return <div>loading...</div>
+    return <div>loading...</div>;
   }
 
-  const authors = result.data.allAuthors
+  const authors = result.data?.allAuthors || [];
 
   const submit = async (event) => {
-    event.preventDefault()
+    event.preventDefault();
+    const selectedName = name || (authors[0] ? authors[0].name : "");
 
-    changeBorn({ variables: { name, setBornTo: parseInt(born) } })
+    changeBorn({
+      variables: {
+        name: selectedName,
+        setBornTo: parseInt(born, 10),
+      },
+    });
 
-    setName('')
-    setBorn('')
-  }
+    setName("");
+    setBorn("");
+  };
 
   return (
     <div>
@@ -55,19 +69,24 @@ const Authors = ({ show, token }) => {
           <h3>Set birthyear</h3>
           <form onSubmit={submit}>
             <div>
-              name
-              <select value={name} onChange={({ target }) => setName(target.value)}>
-                <option value="">select author</option>
+              <label htmlFor="author-select">name</label>
+              <select
+                id="author-select"
+                name="name"
+                value={name || (authors[0] ? authors[0].name : "")}
+                onChange={({ target }) => setName(target.value)}
+              >
                 {authors.map((a) => (
-                  <option key={a.id} value={a.name}>
+                  <option key={a.name} value={a.name}>
                     {a.name}
                   </option>
                 ))}
               </select>
             </div>
             <div>
-              born
+              <label htmlFor="born">born</label>
               <input
+                id="born"
                 type="number"
                 value={born}
                 onChange={({ target }) => setBorn(target.value)}
@@ -78,7 +97,7 @@ const Authors = ({ show, token }) => {
         </div>
       )}
     </div>
-  )
-}
+  );
+};
 
-export default Authors
+export default Authors;

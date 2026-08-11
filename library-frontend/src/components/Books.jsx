@@ -4,28 +4,25 @@ import { ALL_BOOKS } from '../queries'
 
 const Books = ({ show }) => {
   const [selectedGenre, setSelectedGenre] = useState(null)
-
-  // Query to obtain all unique genres
-  const allBooksResult = useQuery(ALL_BOOKS)
-
-  // Query sent to the server with the specific genre variable
-  const filteredResult = useQuery(ALL_BOOKS, {
-    variables: { genre: selectedGenre },
-  })
+  const result = useQuery(ALL_BOOKS)
 
   if (!show) {
     return null
   }
 
-  if (allBooksResult.loading || filteredResult.loading) {
+  if (result.loading) {
     return <div>loading...</div>
   }
 
-  const allBooks = allBooksResult.data?.allBooks || []
-  const books = filteredResult.data?.allBooks || []
+  const books = result.data?.allBooks || []
 
-  // Extract unique genres across all books
-  const genres = Array.from(new Set(allBooks.flatMap((b) => b.genres || [])))
+  const genres = Array.from(
+    new Set(books.flatMap((b) => b.genres || []))
+  )
+
+  const displayedBooks = selectedGenre
+    ? books.filter((b) => b.genres?.includes(selectedGenre))
+    : books
 
   return (
     <div>
@@ -44,20 +41,20 @@ const Books = ({ show }) => {
             <th>author</th>
             <th>published</th>
           </tr>
-          {books.map((b) => (
-            <tr key={b.id || b.title}>
-              <td>{b.title}</td>
-              <td>{b.author ? b.author.name : ''}</td>
-              <td>{b.published}</td>
+          {displayedBooks.map((a) => (
+            <tr key={a.title}>
+              <td>{a.title}</td>
+              <td>{a.author?.name}</td>
+              <td>{a.published}</td>
             </tr>
           ))}
         </tbody>
       </table>
 
-      <div style={{ marginTop: 15 }}>
-        {genres.map((genre) => (
-          <button key={genre} onClick={() => setSelectedGenre(genre)}>
-            {genre}
+      <div>
+        {genres.map((g) => (
+          <button key={g} onClick={() => setSelectedGenre(g)}>
+            {g}
           </button>
         ))}
         <button onClick={() => setSelectedGenre(null)}>all genres</button>

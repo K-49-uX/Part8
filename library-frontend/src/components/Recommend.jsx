@@ -2,12 +2,15 @@ import { useQuery } from '@apollo/client/react'
 import { ME, ALL_BOOKS } from '../queries'
 
 const Recommend = ({ show }) => {
-  const userResult = useQuery(ME)
+  const userResult = useQuery(ME, {
+    skip: !show,
+  })
+
   const favoriteGenre = userResult.data?.me?.favoriteGenre
 
   const booksResult = useQuery(ALL_BOOKS, {
     variables: { genre: favoriteGenre },
-    skip: !favoriteGenre,
+    skip: !show || !favoriteGenre,
   })
 
   if (!show) {
@@ -34,11 +37,11 @@ const Recommend = ({ show }) => {
             <th>author</th>
             <th>published</th>
           </tr>
-          {books.map((b) => (
-            <tr key={b.id || b.title}>
-              <td>{b.title}</td>
-              <td>{b.author ? b.author.name : ''}</td>
-              <td>{b.published}</td>
+          {books.map((a) => (
+            <tr key={a.title}>
+              <td>{a.title}</td>
+              <td>{a.author?.name}</td>
+              <td>{a.published}</td>
             </tr>
           ))}
         </tbody>

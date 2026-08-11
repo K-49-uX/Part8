@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useMutation } from '@apollo/client/react'
 import { LOGIN } from '../queries'
 
-const LoginForm = ({ show, setToken, setPage }) => {
+const LoginForm = ({ show, setToken, setPage, setError }) => {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
 
@@ -11,10 +11,14 @@ const LoginForm = ({ show, setToken, setPage }) => {
       const token = data.login.value
       setToken(token)
       localStorage.setItem('library-user-token', token)
+      setUsername('')
+      setPassword('')
       setPage('authors')
     },
     onError: (error) => {
-      console.error(error.message)
+      if (setError) {
+        setError(error.graphQLErrors?.[0]?.message || 'login failed')
+      }
     },
   })
 
@@ -29,17 +33,20 @@ const LoginForm = ({ show, setToken, setPage }) => {
 
   return (
     <div>
+      <h2>Login</h2>
       <form onSubmit={submit}>
         <div>
-          name{' '}
+          <label htmlFor="username">username</label>
           <input
+            id="username"
             value={username}
             onChange={({ target }) => setUsername(target.value)}
           />
         </div>
         <div>
-          password{' '}
+          <label htmlFor="password">password</label>
           <input
+            id="password"
             type="password"
             value={password}
             onChange={({ target }) => setPassword(target.value)}

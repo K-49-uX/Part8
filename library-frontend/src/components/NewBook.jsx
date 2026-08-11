@@ -1,43 +1,25 @@
 import { useState } from 'react'
 import { useMutation } from '@apollo/client/react'
-import { CREATE_BOOK, ALL_BOOKS, ALL_AUTHORS } from '../queries'
+import { ADD_BOOK, ALL_BOOKS, ALL_AUTHORS } from '../queries'
 
-const NewBook = ({ show, setPage }) => {
+const NewBook = ({ show, setError, setPage }) => {
   const [title, setTitle] = useState('')
   const [author, setAuthor] = useState('')
   const [published, setPublished] = useState('')
   const [genre, setGenre] = useState('')
   const [genres, setGenres] = useState([])
 
-  const [createBook] = useMutation(CREATE_BOOK, {
-    refetchQueries: [{ query: ALL_AUTHORS }],
-    update: (cache, response) => {
-      const addedBook = response.data.addBook
-
-      // Helper function to update the cache for specific query variables
-      const updateBookCache = (variables) => {
-        cache.updateQuery({ query: ALL_BOOKS, variables }, (data) => {
-          if (!data) return null
-          // Avoid duplicate entries
-          const isDuplicate = data.allBooks.some((b) => b.id === addedBook.id)
-          if (isDuplicate) return data
-          return {
-            allBooks: data.allBooks.concat(addedBook),
-          }
-        })
+  const [createBook] = useMutation(ADD_BOOK, {
+    refetchQueries: [{ query: ALL_BOOKS }, { query: ALL_AUTHORS }],
+    onCompleted: () => {
+      if (setPage) {
+        setPage('books')
       }
-
-      // Update the unfiltered books query cache
-      updateBookCache()
-      updateBookCache({ genre: null })
-
-      // Update cache for each genre the new book belongs to
-      addedBook.genres.forEach((g) => {
-        updateBookCache({ genre: g })
-      })
     },
     onError: (error) => {
-      console.error(error.message)
+      if (setError) {
+        setError(error.graphQLErrors?.[0]?.message || 'Failed to add book')
+      }
     },
   })
 
@@ -52,7 +34,7 @@ const NewBook = ({ show, setPage }) => {
       variables: {
         title,
         author,
-        published: parseInt(published),
+        published: parseInt(published, 10),
         genres,
       },
     })
@@ -62,7 +44,6 @@ const NewBook = ({ show, setPage }) => {
     setAuthor('')
     setGenres([])
     setGenre('')
-    setPage('books')
   }
 
   const addGenre = () => {
@@ -76,29 +57,34 @@ const NewBook = ({ show, setPage }) => {
     <div>
       <form onSubmit={submit}>
         <div>
-          title
+          <label htmlFor="title">title</label>
           <input
+            id="title"
             value={title}
             onChange={({ target }) => setTitle(target.value)}
           />
         </div>
         <div>
-          author
+          <label htmlFor="author">author</label>
           <input
+            id="author"
             value={author}
             onChange={({ target }) => setAuthor(target.value)}
           />
         </div>
         <div>
-          published
+          <label htmlFor="published">published</label>
           <input
+            id="published"
             type="number"
             value={published}
             onChange={({ target }) => setPublished(target.value)}
           />
         </div>
         <div>
+          <label htmlFor="genre">genre</label>
           <input
+            id="genre"
             value={genre}
             onChange={({ target }) => setGenre(target.value)}
           />
