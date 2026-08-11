@@ -3,22 +3,22 @@ import { ME, ALL_BOOKS } from '../queries'
 
 const Recommend = ({ show }) => {
   const userResult = useQuery(ME)
-  const booksResult = useQuery(ALL_BOOKS)
+  const favoriteGenre = userResult.data?.me?.favoriteGenre
+
+  const booksResult = useQuery(ALL_BOOKS, {
+    variables: { genre: favoriteGenre },
+    skip: !favoriteGenre,
+  })
 
   if (!show) {
     return null
   }
 
-  if (userResult.loading || booksResult.loading) {
+  if (userResult.loading || (favoriteGenre && booksResult.loading)) {
     return <div>loading...</div>
   }
 
-  const favoriteGenre = userResult.data?.me?.favoriteGenre
   const books = booksResult.data?.allBooks || []
-
-  const recommendedBooks = favoriteGenre
-    ? books.filter((b) => b.genres.includes(favoriteGenre))
-    : books
 
   return (
     <div>
@@ -34,7 +34,7 @@ const Recommend = ({ show }) => {
             <th>author</th>
             <th>published</th>
           </tr>
-          {recommendedBooks.map((b) => (
+          {books.map((b) => (
             <tr key={b.id || b.title}>
               <td>{b.title}</td>
               <td>{b.author ? b.author.name : ''}</td>
